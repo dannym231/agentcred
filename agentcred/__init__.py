@@ -9,11 +9,12 @@ from .exceptions import (
 )
 from .identity import Identity
 from .reputation import Reputation, ReputationEvent
-from .wallet import Transaction, Wallet
+from .wallet import BaseWallet, Transaction, Wallet
 
 __all__ = [
     "AgentCredAgent",
     "AgentCredError",
+    "BaseWallet",
     "Identity",
     "InsufficientFundsError",
     "InvalidTransferAmountError",

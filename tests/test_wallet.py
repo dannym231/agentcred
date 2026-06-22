@@ -1,4 +1,5 @@
 import unittest
+import json
 from decimal import Decimal
 
 from agentcred import (
@@ -38,6 +39,33 @@ class WalletTests(unittest.TestCase):
             with self.subTest(amount=amount):
                 with self.assertRaises(InvalidTransferAmountError):
                     Wallet().send(Wallet(), amount)
+
+    def test_transaction_ids_exist_and_are_unique(self):
+        sender = Wallet(100)
+        recipient = Wallet(10)
+
+        first = sender.send(recipient, 10)
+        second = sender.send(recipient, 10)
+
+        self.assertTrue(first.transaction_id)
+        self.assertTrue(second.transaction_id)
+        self.assertNotEqual(first.transaction_id, second.transaction_id)
+
+    def test_wallet_serialization(self):
+        sender = Wallet(100, address="sender")
+        recipient = Wallet(10, address="recipient")
+        transaction = sender.send(recipient, "12.50", memo="paid task")
+
+        exported = sender.to_dict()
+
+        self.assertEqual(exported["address"], "sender")
+        self.assertEqual(exported["balance"], "87.50")
+        self.assertEqual(exported["history"][0]["amount"], "12.50")
+        self.assertEqual(
+            exported["history"][0]["transaction_id"],
+            transaction.transaction_id,
+        )
+        self.assertEqual(json.loads(sender.to_json()), exported)
 
 
 if __name__ == "__main__":

@@ -1,4 +1,5 @@
 import unittest
+import json
 
 from agentcred import Identity
 
@@ -13,6 +14,17 @@ class IdentityTests(unittest.TestCase):
         self.assertEqual(first.name, "researcher")
         self.assertEqual(first.metadata, {"model": "local"})
         self.assertTrue(first.address.startswith("0x"))
+
+    def test_identity_serialization(self):
+        identity = Identity("researcher", {"model": "local"})
+
+        exported = identity.to_dict()
+
+        self.assertEqual(exported["name"], "researcher")
+        self.assertEqual(exported["agent_id"], identity.agent_id)
+        self.assertEqual(exported["address"], identity.address)
+        self.assertEqual(exported["metadata"], {"model": "local"})
+        self.assertEqual(json.loads(identity.to_json()), exported)
 
 
 if __name__ == "__main__":

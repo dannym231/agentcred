@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import json
+from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from decimal import Decimal, InvalidOperation
@@ -40,8 +42,49 @@ class Transaction:
     memo: str | None
     created_at: datetime
 
+    def to_dict(self) -> dict[str, Any]:
+        """Return a JSON-serializable transaction snapshot."""
+        return {
+            "transaction_id": self.transaction_id,
+            "sender": self.sender,
+            "recipient": self.recipient,
+            "amount": str(self.amount),
+            "memo": self.memo,
+            "created_at": self.created_at.isoformat(),
+        }
 
-class Wallet:
+
+class BaseWallet(ABC):
+    """Interface implemented by local and future external wallet adapters."""
+
+    address: str
+
+    @property
+    @abstractmethod
+    def balance(self) -> Decimal:
+        """Return the wallet's current balance."""
+
+    @property
+    @abstractmethod
+    def history(self) -> tuple[Transaction, ...]:
+        """Return the wallet's transaction history."""
+
+    @abstractmethod
+    def send(
+        self, recipient: BaseWallet, amount: Any, memo: str | None = None
+    ) -> Transaction:
+        """Send funds and return the resulting transaction."""
+
+    @abstractmethod
+    def to_dict(self) -> dict[str, Any]:
+        """Return a JSON-serializable wallet snapshot."""
+
+    def to_json(self) -> str:
+        """Return the wallet snapshot as JSON."""
+        return json.dumps(self.to_dict(), sort_keys=True)
+
+
+class Wallet(BaseWallet):
     """An in-memory wallet with a mock credit balance."""
 
     def __init__(self, balance: Any = 100, address: str | None = None) -> None:
@@ -63,7 +106,7 @@ class Wallet:
         return self.transaction_history
 
     def send(
-        self, recipient: Wallet, amount: Any, memo: str | None = None
+        self, recipient: BaseWallet, amount: Any, memo: str | None = None
     ) -> Transaction:
         """Transfer credits atomically to another local wallet."""
         if not isinstance(recipient, Wallet):
@@ -88,3 +131,11 @@ class Wallet:
         if recipient is not self:
             recipient._history.append(transaction)
         return transaction
+
+    def to_dict(self) -> dict[str, Any]:
+        """Return a JSON-serializable wallet snapshot."""
+        return {
+            "address": self.address,
+            "balance": str(self.balance),
+            "history": [transaction.to_dict() for transaction in self.history],
+        }

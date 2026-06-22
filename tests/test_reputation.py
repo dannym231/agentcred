@@ -1,4 +1,5 @@
 import unittest
+import json
 
 from agentcred import Reputation
 
@@ -16,6 +17,47 @@ class ReputationTests(unittest.TestCase):
         self.assertEqual(reputation.score, 45.0)
         self.assertEqual(reputation.failed_count, 1)
         self.assertEqual(reputation.history, (completed, failed))
+
+    def test_event_ids_exist_and_are_unique(self):
+        reputation = Reputation()
+
+        first = reputation.record_completed()
+        second = reputation.record_failed()
+
+        self.assertTrue(first.event_id)
+        self.assertTrue(second.event_id)
+        self.assertNotEqual(first.event_id, second.event_id)
+
+    def test_event_can_link_to_wallet_transaction(self):
+        reputation = Reputation()
+
+        event = reputation.record_completed(
+            "task", transaction_id="transaction-123"
+        )
+
+        self.assertEqual(event.transaction_id, "transaction-123")
+
+    def test_event_can_exist_without_wallet_transaction(self):
+        event = Reputation().record_completed("task")
+
+        self.assertIsNone(event.transaction_id)
+
+    def test_reputation_serialization(self):
+        reputation = Reputation()
+        event = reputation.record_completed(
+            "task", details="on time", transaction_id="transaction-123"
+        )
+
+        exported = reputation.to_dict()
+
+        self.assertEqual(exported["score"], 55.0)
+        self.assertEqual(exported["completed_count"], 1)
+        self.assertEqual(exported["failed_count"], 0)
+        self.assertEqual(exported["history"][0]["event_id"], event.event_id)
+        self.assertEqual(
+            exported["history"][0]["transaction_id"], "transaction-123"
+        )
+        self.assertEqual(json.loads(reputation.to_json()), exported)
 
 
 if __name__ == "__main__":

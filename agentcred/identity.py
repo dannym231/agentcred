@@ -33,3 +33,16 @@ class Identity:
 
     def __repr__(self) -> str:
         return f"Identity(name={self.name!r}, agent_id={self.agent_id!r})"
+
+    def to_dict(self) -> dict[str, Any]:
+        """Return a JSON-serializable identity snapshot."""
+        return {
+            "name": self.name,
+            "agent_id": self.agent_id,
+            "address": self.address,
+            "metadata": deepcopy(self.metadata),
+        }
+
+    def to_json(self) -> str:
+        """Return the identity snapshot as JSON."""
+        return json.dumps(self.to_dict(), sort_keys=True)
