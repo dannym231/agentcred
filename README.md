@@ -5,23 +5,25 @@ deterministic local identity, and a reputation score. This MVP is entirely
 local: it makes no network calls, uses no API keys, and has no Coinbase or Base
 dependency.
 
-## Quick start
+## Installation
 
 AgentCred requires Python 3.10 or newer and has no third-party dependencies.
+
+Install it locally in editable mode:
+
+```bash
+pip install -e .
+```
+
+## Minimal usage
 
 ```python
 from agentcred import AgentCredAgent
 
-buyer = AgentCredAgent("buyer", initial_balance=100)
-seller = AgentCredAgent("seller", initial_balance=25)
-
-buyer.wallet.send(seller.wallet, 10, memo="sample trade")
-buyer.reputation.record_completed("trade")
-
-print(buyer.wallet.balance)       # Decimal('90')
-print(seller.wallet.balance)      # Decimal('35')
-print(buyer.identity.agent_id)    # deterministic local identifier
-print(buyer.reputation.score)     # 55.0
+agent = AgentCredAgent("researcher")
+print(agent.identity.agent_id)
+print(agent.wallet.balance)
+print(agent.reputation.score)
 ```
 
 ## Components
@@ -38,5 +40,5 @@ later be replaced by Coinbase AgentKit and Base-backed adapters.
 ## Tests
 
 ```bash
-python3 -m unittest discover -s tests -v
+python -m unittest discover -s tests -v
 ```
