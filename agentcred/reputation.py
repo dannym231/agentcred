@@ -11,7 +11,7 @@ from uuid import uuid4
 
 @dataclass(frozen=True)
 class ReputationEvent:
-    """A completed or failed unit of work."""
+    """A completed, failed, or voided unit of work."""
 
     event_id: str
     outcome: str
@@ -78,6 +78,14 @@ class Reputation:
         transaction_id: str | None = None,
     ) -> ReputationEvent:
         return self._record("failed", category, details, transaction_id)
+
+    def record_void(
+        self,
+        category: str = "job",
+        details: str | None = None,
+        transaction_id: str | None = None,
+    ) -> ReputationEvent:
+        return self._record("void", category, details, transaction_id)
 
     def record_success(
         self,

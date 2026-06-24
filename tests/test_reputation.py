@@ -42,6 +42,48 @@ class ReputationTests(unittest.TestCase):
 
         self.assertIsNone(event.transaction_id)
 
+    def test_record_void_appends_neutral_event(self):
+        reputation = Reputation()
+        score = reputation.score
+
+        event = reputation.record_void("prediction", details="market refunded")
+
+        self.assertEqual(event.outcome, "void")
+        self.assertEqual(event.category, "prediction")
+        self.assertEqual(event.details, "market refunded")
+        self.assertEqual(reputation.history, (event,))
+        self.assertEqual(reputation.score, score)
+        self.assertEqual(reputation.completed_count, 0)
+        self.assertEqual(reputation.failed_count, 0)
+
+    def test_record_void_can_link_to_wallet_transaction(self):
+        reputation = Reputation()
+
+        event = reputation.record_void(
+            "prediction", transaction_id="transaction-void"
+        )
+
+        self.assertEqual(event.transaction_id, "transaction-void")
+
+    def test_void_event_json_round_trip(self):
+        reputation = Reputation()
+        event = reputation.record_void(
+            "prediction",
+            details="refunded market",
+            transaction_id="transaction-void",
+        )
+
+        restored = Reputation.from_json(reputation.to_json())
+
+        self.assertEqual(restored.to_dict(), reputation.to_dict())
+        self.assertEqual(restored.score, 50.0)
+        self.assertEqual(restored.completed_count, 0)
+        self.assertEqual(restored.failed_count, 0)
+        self.assertEqual(restored.history[0].event_id, event.event_id)
+        self.assertEqual(restored.history[0].outcome, "void")
+        self.assertEqual(restored.history[0].transaction_id, "transaction-void")
+        self.assertEqual(restored.history[0].created_at, event.created_at)
+
     def test_reputation_serialization(self):
         reputation = Reputation()
         event = reputation.record_completed(
