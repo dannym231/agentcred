@@ -6,8 +6,8 @@ import json
 from typing import Any, Mapping
 
 from .identity import Identity
-from .reputation import Reputation
-from .wallet import BaseWallet, Wallet
+from .reputation import Reputation, ReputationEvent
+from .wallet import BaseWallet, Transaction, Wallet
 
 
 class AgentCredAgent:
@@ -33,6 +33,25 @@ class AgentCredAgent:
 
     def __repr__(self) -> str:
         return f"AgentCredAgent(name={self.name!r})"
+
+    def pay_for_completed_task(
+        self,
+        recipient: AgentCredAgent,
+        amount: Any,
+        category: str,
+        details: str | None = None,
+    ) -> tuple[Transaction, ReputationEvent]:
+        """Pay another agent and credit its reputation for completed work."""
+        if not isinstance(recipient, AgentCredAgent):
+            raise TypeError("recipient must be an AgentCredAgent")
+
+        transaction = self.wallet.send(recipient.wallet, amount, memo=details)
+        event = recipient.reputation.record_completed(
+            category=category,
+            details=details,
+            transaction_id=transaction.transaction_id,
+        )
+        return transaction, event
 
     def to_dict(self) -> dict[str, Any]:
         """Return a JSON-serializable snapshot of the full agent."""

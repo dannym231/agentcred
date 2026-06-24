@@ -2,7 +2,15 @@ import unittest
 import json
 from decimal import Decimal
 
-from agentcred import AgentCredAgent, BaseWallet, Identity, Reputation, Wallet
+from agentcred import (
+    AgentCredAgent,
+    BaseWallet,
+    Identity,
+    InsufficientFundsError,
+    InvalidTransferAmountError,
+    Reputation,
+    Wallet,
+)
 
 
 class AgentCredAgentTests(unittest.TestCase):
@@ -56,6 +64,67 @@ class AgentCredAgentTests(unittest.TestCase):
 
         self.assertIsInstance(agent.wallet, BaseWallet)
         self.assertIs(agent.wallet, wallet)
+
+    def test_pay_for_completed_task_links_payment_to_recipient_reputation(self):
+        buyer = AgentCredAgent("buyer", initial_balance=100)
+        seller = AgentCredAgent("seller", initial_balance=0)
+
+        transaction, event = buyer.pay_for_completed_task(
+            recipient=seller,
+            amount=25,
+            category="labeling-task",
+            details="Seller completed labeling task",
+        )
+
+        self.assertEqual(buyer.wallet.balance, Decimal("75"))
+        self.assertEqual(seller.wallet.balance, Decimal("25"))
+        self.assertEqual(transaction.memo, "Seller completed labeling task")
+        self.assertEqual(event.outcome, "completed")
+        self.assertEqual(event.category, "labeling-task")
+        self.assertEqual(event.details, "Seller completed labeling task")
+        self.assertEqual(event.transaction_id, transaction.transaction_id)
+        self.assertEqual(seller.reputation.history, (event,))
+        self.assertEqual(buyer.reputation.history, ())
+
+    def test_pay_for_completed_task_overdraft_does_not_record_reputation(self):
+        buyer = AgentCredAgent("buyer", initial_balance=10)
+        seller = AgentCredAgent("seller", initial_balance=0)
+
+        with self.assertRaises(InsufficientFundsError):
+            buyer.pay_for_completed_task(
+                recipient=seller,
+                amount=25,
+                category="labeling-task",
+                details="Seller completed labeling task",
+            )
+
+        self.assertEqual(buyer.wallet.balance, Decimal("10"))
+        self.assertEqual(seller.wallet.balance, Decimal("0"))
+        self.assertEqual(buyer.wallet.history, ())
+        self.assertEqual(seller.wallet.history, ())
+        self.assertEqual(seller.reputation.history, ())
+
+    def test_pay_for_completed_task_invalid_amount_does_not_record_reputation(self):
+        invalid_amounts = (-1, 0, float("nan"), float("inf"), float("-inf"))
+
+        for amount in invalid_amounts:
+            with self.subTest(amount=amount):
+                buyer = AgentCredAgent("buyer", initial_balance=100)
+                seller = AgentCredAgent("seller", initial_balance=0)
+
+                with self.assertRaises(InvalidTransferAmountError):
+                    buyer.pay_for_completed_task(
+                        recipient=seller,
+                        amount=amount,
+                        category="labeling-task",
+                        details="Seller completed labeling task",
+                    )
+
+                self.assertEqual(buyer.wallet.balance, Decimal("100"))
+                self.assertEqual(seller.wallet.balance, Decimal("0"))
+                self.assertEqual(buyer.wallet.history, ())
+                self.assertEqual(seller.wallet.history, ())
+                self.assertEqual(seller.reputation.history, ())
 
 
 if __name__ == "__main__":

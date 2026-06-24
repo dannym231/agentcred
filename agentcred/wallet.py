@@ -31,6 +31,24 @@ def _positive_decimal(value: Any, *, label: str) -> Decimal:
     return amount
 
 
+def _nonnegative_decimal(value: Any, *, label: str) -> Decimal:
+    if isinstance(value, bool):
+        raise InvalidTransferAmountError(
+            f"{label} must be a non-negative finite number"
+        )
+    try:
+        amount = Decimal(str(value))
+    except (InvalidOperation, TypeError, ValueError) as error:
+        raise InvalidTransferAmountError(
+            f"{label} must be a non-negative finite number"
+        ) from error
+    if not amount.is_finite() or amount < 0:
+        raise InvalidTransferAmountError(
+            f"{label} must be a non-negative finite number"
+        )
+    return amount
+
+
 @dataclass(frozen=True)
 class Transaction:
     """An immutable local record of a credit transfer."""
@@ -88,7 +106,7 @@ class Wallet(BaseWallet):
     """An in-memory wallet with a mock credit balance."""
 
     def __init__(self, balance: Any = 100, address: str | None = None) -> None:
-        self._balance = _positive_decimal(balance, label="starting balance")
+        self._balance = _nonnegative_decimal(balance, label="starting balance")
         self.address = address or f"mock_{uuid4().hex}"
         self._history: list[Transaction] = []
 
