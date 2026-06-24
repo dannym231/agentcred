@@ -67,6 +67,31 @@ class WalletTests(unittest.TestCase):
         )
         self.assertEqual(json.loads(sender.to_json()), exported)
 
+    def test_wallet_json_round_trip_with_transaction_history(self):
+        sender = Wallet(100, address="sender")
+        recipient = Wallet(10, address="recipient")
+        transaction = sender.send(recipient, "12.50", memo="paid task")
+
+        restored = Wallet.from_json(sender.to_json())
+
+        self.assertEqual(restored.to_dict(), sender.to_dict())
+        self.assertEqual(restored.balance, Decimal("87.50"))
+        self.assertEqual(restored.history[0].amount, Decimal("12.50"))
+        self.assertEqual(
+            restored.history[0].transaction_id, transaction.transaction_id
+        )
+        self.assertEqual(restored.history[0].created_at, transaction.created_at)
+
+    def test_restored_wallet_can_transfer_credits(self):
+        restored = Wallet.from_json(Wallet(40, address="restored").to_json())
+        recipient = Wallet(0, address="recipient")
+
+        transaction = restored.send(recipient, 15, memo="new transfer")
+
+        self.assertEqual(restored.balance, Decimal("25"))
+        self.assertEqual(recipient.balance, Decimal("15"))
+        self.assertEqual(restored.history, (transaction,))
+
 
 if __name__ == "__main__":
     unittest.main()

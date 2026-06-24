@@ -46,3 +46,16 @@ class Identity:
     def to_json(self) -> str:
         """Return the identity snapshot as JSON."""
         return json.dumps(self.to_dict(), sort_keys=True)
+
+    @classmethod
+    def from_dict(cls, data: Mapping[str, Any]) -> Identity:
+        """Restore an identity from a serialized snapshot."""
+        identity = cls(name=data["name"], metadata=data.get("metadata"))
+        identity.agent_id = data["agent_id"]
+        identity.address = data["address"]
+        return identity
+
+    @classmethod
+    def from_json(cls, data: str) -> Identity:
+        """Restore an identity from a JSON snapshot."""
+        return cls.from_dict(json.loads(data))

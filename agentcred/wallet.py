@@ -7,7 +7,7 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from decimal import Decimal, InvalidOperation
-from typing import Any
+from typing import Any, Mapping
 from uuid import uuid4
 
 from .exceptions import (
@@ -157,3 +157,27 @@ class Wallet(BaseWallet):
             "balance": str(self.balance),
             "history": [transaction.to_dict() for transaction in self.history],
         }
+
+    @classmethod
+    def from_dict(cls, data: Mapping[str, Any]) -> Wallet:
+        """Restore a local wallet and its transaction history."""
+        wallet = cls(balance=data["balance"], address=data["address"])
+        wallet._history = [
+            Transaction(
+                transaction_id=transaction["transaction_id"],
+                sender=transaction["sender"],
+                recipient=transaction["recipient"],
+                amount=_positive_decimal(
+                    transaction["amount"], label="transaction amount"
+                ),
+                memo=transaction.get("memo"),
+                created_at=datetime.fromisoformat(transaction["created_at"]),
+            )
+            for transaction in data.get("history", [])
+        ]
+        return wallet
+
+    @classmethod
+    def from_json(cls, data: str) -> Wallet:
+        """Restore a local wallet from a JSON snapshot."""
+        return cls.from_dict(json.loads(data))

@@ -59,6 +59,35 @@ class ReputationTests(unittest.TestCase):
         )
         self.assertEqual(json.loads(reputation.to_json()), exported)
 
+    def test_reputation_json_round_trip_with_transaction_link(self):
+        reputation = Reputation()
+        event = reputation.record_completed(
+            "task", details="on time", transaction_id="transaction-123"
+        )
+        reputation.record_failed("review", details="needs revision")
+
+        restored = Reputation.from_json(reputation.to_json())
+
+        self.assertEqual(restored.to_dict(), reputation.to_dict())
+        self.assertEqual(restored.score, reputation.score)
+        self.assertEqual(restored.completed_count, 1)
+        self.assertEqual(restored.failed_count, 1)
+        self.assertEqual(restored.history[0].event_id, event.event_id)
+        self.assertEqual(restored.history[0].transaction_id, "transaction-123")
+        self.assertEqual(restored.history[0].created_at, event.created_at)
+
+    def test_restored_reputation_can_record_events(self):
+        reputation = Reputation()
+        reputation.record_completed("initial")
+        restored = Reputation.from_json(reputation.to_json())
+
+        event = restored.record_failed("follow-up", details="missed deadline")
+
+        self.assertEqual(restored.completed_count, 1)
+        self.assertEqual(restored.failed_count, 1)
+        self.assertEqual(restored.history[-1], event)
+        self.assertEqual(restored.score, 45.0)
+
 
 if __name__ == "__main__":
     unittest.main()

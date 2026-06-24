@@ -26,6 +26,17 @@ class IdentityTests(unittest.TestCase):
         self.assertEqual(exported["metadata"], {"model": "local"})
         self.assertEqual(json.loads(identity.to_json()), exported)
 
+    def test_identity_json_round_trip(self):
+        identity = Identity("researcher", {"model": "local", "level": 2})
+
+        restored = Identity.from_json(identity.to_json())
+
+        self.assertEqual(restored.to_dict(), identity.to_dict())
+        self.assertEqual(restored.name, identity.name)
+        self.assertEqual(restored.agent_id, identity.agent_id)
+        self.assertEqual(restored.address, identity.address)
+        self.assertEqual(restored.metadata, identity.metadata)
+
 
 if __name__ == "__main__":
     unittest.main()

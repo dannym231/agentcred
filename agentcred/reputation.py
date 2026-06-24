@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass
 from datetime import datetime, timezone
-from typing import Any
+from typing import Any, Mapping
 from uuid import uuid4
 
 
@@ -129,3 +129,25 @@ class Reputation:
     def to_json(self) -> str:
         """Return the reputation snapshot as JSON."""
         return json.dumps(self.to_dict(), sort_keys=True)
+
+    @classmethod
+    def from_dict(cls, data: Mapping[str, Any]) -> Reputation:
+        """Restore reputation state and its event history."""
+        reputation = cls()
+        reputation._history = [
+            ReputationEvent(
+                event_id=event["event_id"],
+                outcome=event["outcome"],
+                category=event["category"],
+                details=event.get("details"),
+                transaction_id=event.get("transaction_id"),
+                created_at=datetime.fromisoformat(event["created_at"]),
+            )
+            for event in data.get("history", [])
+        ]
+        return reputation
+
+    @classmethod
+    def from_json(cls, data: str) -> Reputation:
+        """Restore reputation state from a JSON snapshot."""
+        return cls.from_dict(json.loads(data))

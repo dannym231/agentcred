@@ -57,6 +57,52 @@ class AgentCredAgentTests(unittest.TestCase):
         )
         self.assertEqual(json.loads(agent.to_json()), exported)
 
+    def test_agent_json_round_trip(self):
+        buyer = AgentCredAgent(
+            "buyer", metadata={"model": "local"}, initial_balance=100
+        )
+        seller = AgentCredAgent("seller", initial_balance=0)
+        transaction, event = buyer.pay_for_completed_task(
+            recipient=seller,
+            amount="25.50",
+            category="labeling-task",
+            details="Seller completed labeling task",
+        )
+
+        restored = AgentCredAgent.from_json(seller.to_json())
+
+        self.assertEqual(restored.to_dict(), seller.to_dict())
+        self.assertEqual(restored.identity.agent_id, seller.identity.agent_id)
+        self.assertEqual(restored.wallet.balance, seller.wallet.balance)
+        self.assertEqual(restored.reputation.score, seller.reputation.score)
+        self.assertEqual(
+            restored.wallet.history[0].transaction_id, transaction.transaction_id
+        )
+        self.assertEqual(restored.reputation.history[0].event_id, event.event_id)
+        self.assertEqual(
+            restored.reputation.history[0].transaction_id,
+            restored.wallet.history[0].transaction_id,
+        )
+
+    def test_restored_agent_remains_operational(self):
+        original = AgentCredAgent("buyer", initial_balance=100)
+        restored = AgentCredAgent.from_json(original.to_json())
+        seller = AgentCredAgent("seller", initial_balance=0)
+
+        transaction, event = restored.pay_for_completed_task(
+            recipient=seller,
+            amount=20,
+            category="restored-task",
+            details="Task completed after restore",
+        )
+        recorded = restored.reputation.record_completed("self-check")
+
+        self.assertEqual(restored.wallet.balance, Decimal("80"))
+        self.assertEqual(seller.wallet.balance, Decimal("20"))
+        self.assertEqual(event.transaction_id, transaction.transaction_id)
+        self.assertEqual(seller.reputation.history, (event,))
+        self.assertEqual(restored.reputation.history, (recorded,))
+
     def test_agent_accepts_wallet_interface_implementation(self):
         wallet = Wallet(25, address="adapter-address")
 

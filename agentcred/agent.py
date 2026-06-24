@@ -65,3 +65,19 @@ class AgentCredAgent:
     def to_json(self) -> str:
         """Return the full agent snapshot as JSON."""
         return json.dumps(self.to_dict(), sort_keys=True)
+
+    @classmethod
+    def from_dict(cls, data: Mapping[str, Any]) -> AgentCredAgent:
+        """Restore an agent and all of its local components."""
+        identity = Identity.from_dict(data["identity"])
+        wallet = Wallet.from_dict(data["wallet"])
+        agent = cls(name=identity.name, metadata=identity.metadata, wallet=wallet)
+        agent.identity = identity
+        agent.name = data.get("name", identity.name)
+        agent.reputation = Reputation.from_dict(data["reputation"])
+        return agent
+
+    @classmethod
+    def from_json(cls, data: str) -> AgentCredAgent:
+        """Restore an agent from a JSON snapshot."""
+        return cls.from_dict(json.loads(data))
