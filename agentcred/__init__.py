@@ -1,6 +1,6 @@
 """Public API for the AgentCred local SDK."""
 
-from .agent import AgentCredAgent
+from .agent import SCHEMA_VERSION, AgentCredAgent
 from .exceptions import (
     AgentCredError,
     InsufficientFundsError,
@@ -21,6 +21,7 @@ __all__ = [
     "InvalidWalletError",
     "Reputation",
     "ReputationEvent",
+    "SCHEMA_VERSION",
     "Transaction",
     "Wallet",
 ]

@@ -9,6 +9,8 @@ from .identity import Identity
 from .reputation import Reputation, ReputationEvent
 from .wallet import BaseWallet, Transaction, Wallet
 
+SCHEMA_VERSION = "0.1"
+
 
 class AgentCredAgent:
     """Bundle an agent's wallet, identity, and reputation."""
@@ -56,6 +58,7 @@ class AgentCredAgent:
     def to_dict(self) -> dict[str, Any]:
         """Return a JSON-serializable snapshot of the full agent."""
         return {
+            "schema_version": SCHEMA_VERSION,
             "name": self.name,
             "identity": self.identity.to_dict(),
             "wallet": self.wallet.to_dict(),
@@ -69,6 +72,12 @@ class AgentCredAgent:
     @classmethod
     def from_dict(cls, data: Mapping[str, Any]) -> AgentCredAgent:
         """Restore an agent and all of its local components."""
+        schema_version = data.get("schema_version", SCHEMA_VERSION)
+        if schema_version != SCHEMA_VERSION:
+            raise ValueError(
+                f"unsupported AgentCred schema version {schema_version!r}; "
+                f"expected {SCHEMA_VERSION!r}"
+            )
         identity = Identity.from_dict(data["identity"])
         wallet = Wallet.from_dict(data["wallet"])
         agent = cls(name=identity.name, metadata=identity.metadata, wallet=wallet)

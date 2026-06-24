@@ -9,6 +9,7 @@ from agentcred import (
     InsufficientFundsError,
     InvalidTransferAmountError,
     Reputation,
+    SCHEMA_VERSION,
     Wallet,
 )
 
@@ -44,6 +45,7 @@ class AgentCredAgentTests(unittest.TestCase):
 
         exported = agent.to_dict()
 
+        self.assertEqual(exported["schema_version"], SCHEMA_VERSION)
         self.assertEqual(exported["identity"]["agent_id"], agent.identity.agent_id)
         self.assertEqual(exported["wallet"]["balance"], "80")
         self.assertEqual(
@@ -56,6 +58,34 @@ class AgentCredAgentTests(unittest.TestCase):
             transaction.transaction_id,
         )
         self.assertEqual(json.loads(agent.to_json()), exported)
+
+    def test_from_dict_accepts_current_schema_version(self):
+        agent = AgentCredAgent("worker")
+        exported = agent.to_dict()
+
+        restored = AgentCredAgent.from_dict(exported)
+
+        self.assertEqual(restored.to_dict(), exported)
+
+    def test_from_dict_accepts_missing_schema_version(self):
+        agent = AgentCredAgent("legacy-worker")
+        exported = agent.to_dict()
+        del exported["schema_version"]
+
+        restored = AgentCredAgent.from_dict(exported)
+
+        self.assertEqual(restored.name, agent.name)
+        self.assertEqual(restored.identity.agent_id, agent.identity.agent_id)
+        self.assertEqual(restored.to_dict()["schema_version"], SCHEMA_VERSION)
+
+    def test_from_dict_rejects_unsupported_schema_version(self):
+        exported = AgentCredAgent("worker").to_dict()
+        exported["schema_version"] = "9.9"
+
+        with self.assertRaisesRegex(
+            ValueError, "unsupported AgentCred schema version '9.9'"
+        ):
+            AgentCredAgent.from_dict(exported)
 
     def test_agent_json_round_trip(self):
         buyer = AgentCredAgent(
